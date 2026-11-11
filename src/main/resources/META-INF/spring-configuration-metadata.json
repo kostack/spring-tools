@@ -1,0 +1,17 @@
+{
+  "groups": [
+    {
+      "name": "kostack.spring-tools.web-input-handler",
+      "description": "Settings for the built-in ServerWebInputExceptionHandler."
+    }
+  ],
+  "properties": [
+    {
+      "name": "kostack.spring-tools.web-input-handler.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "Whether to register ServerWebInputExceptionHandler, which maps bad request input to ApiValidation responses.",
+      "sourceType": "io.github.kostack.spring_tools.AutoConfiguration"
+    }
+  ]
+}
