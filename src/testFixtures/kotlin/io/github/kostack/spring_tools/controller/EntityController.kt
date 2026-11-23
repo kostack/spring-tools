@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController
 class EntityController {
   @GetMapping("/entity-with-path/{id}", produces = [MediaType.APPLICATION_JSON_VALUE])
   suspend fun entityWithPathAction(
-    @PathVariable id: String,
-    @ResolvedArgument entity: Entity
-  ): Entity? = entity
+    @PathVariable("id") id: String,
+    @ResolvedArgument("load-with-id") entity: Entity
+  ): Entity = entity
 }

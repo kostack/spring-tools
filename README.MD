@@ -155,20 +155,20 @@ Enum errors list the values clients can actually send, honouring `@JsonValue` an
 
 ## Argument resolvers
 
-`MethodArgumentResolver` adds helpers for reading request values inside your own `HandlerMethodArgumentResolver`, and
+`ServerWebExchange` extensions read request values inside your own `HandlerMethodArgumentResolver`, and
 `@ResolvedArgument` marks the controller parameters it should fill. Declare the resolver as a bean and Spring Boot
 registers it with WebFlux automatically:
 
 ```kotlin
-import io.github.kostack.spring_tools.controller.resolver.MethodArgumentResolver
 import io.github.kostack.spring_tools.controller.resolver.ResolvedArgument
+import io.github.kostack.spring_tools.controller.resolver.getPathParameter
+import io.github.kostack.spring_tools.controller.resolver.getRequestParameterOrNull
 import kotlinx.coroutines.reactor.mono
 
 @Component
 class UserArgumentResolver(
   private val users: UserRepository
-) : HandlerMethodArgumentResolver,
-  MethodArgumentResolver {
+) : HandlerMethodArgumentResolver {
   override fun supportsParameter(parameter: MethodParameter): Boolean =
     parameter.hasParameterAnnotation(ResolvedArgument::class.java) && parameter.parameterType == User::class.java
 
@@ -178,8 +178,8 @@ class UserArgumentResolver(
     exchange: ServerWebExchange
   ): Mono<Any> =
     mono {
-      val id = getPathParameter<String>("id", exchange)
-      val include = getRequestParameterOrNull("include", exchange)
+      val id = exchange.getPathParameter<String>("id")
+      val include = exchange.getRequestParameterOrNull("include")
       users.findById(id, include)
     }
 }
@@ -196,6 +196,48 @@ class UserController {
 | `getPathParameter<T>`       | the path variable               | `IllegalArgumentException` (500)               |
 | `getRequestParameter`       | first value of a query parameter | `ServerWebInputException` (400)               |
 | `getRequestParameterOrNull` | first value of a query parameter | `null`                                        |
+
+These functions are extensions on `ServerWebExchange`; import the functions you use without implementing an
+additional interface. `getPathParameter<T>` reads the stored path variable without converting it; WebFlux normally
+stores path variables as strings.
+
+`@ResolvedArgument` has an optional `hint` string, defaulting to `"default"`, for your resolver to interpret:
+
+```kotlin
+// Controller parameter
+@ResolvedArgument(hint = "include-inactive") user: User
+
+// Inside resolveArgument
+val hint = parameter.getParameterAnnotation(ResolvedArgument::class.java)?.hint
+```
+
+### Parameter names
+
+Give Spring's named parameters explicit names when using annotations such as `@PathVariable` or `@RequestParam`:
+
+```kotlin
+@GetMapping("/users/{id}")
+suspend fun findUser(
+  @PathVariable("id") id: String,
+  @RequestParam("include", required = false) include: String?
+): User = users.findById(id, include)
+```
+
+If you omit the annotation names, enable parameter-name metadata in the consuming application's `build.gradle.kts`:
+
+```kotlin
+kotlin {
+  compilerOptions {
+    javaParameters.set(true)
+  }
+}
+```
+
+This setting must be applied in the project compiling the controllers; the library's compiler configuration does
+not configure consuming applications. Rebuild and restart after changing it. Without an explicit annotation name
+or discoverable parameter-name metadata, Spring can return `500` with `Name for argument ... not specified`.
+The exchange extensions take explicit names, such as `exchange.getPathParameter<String>("id")`, and do not need
+reflection to discover them.
 
 ## HTTP helpers
 

@@ -10,9 +10,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
-class MethodArgumentResolverTest {
-  private val resolver = object : MethodArgumentResolver {}
-
+class ServerExchangeExtensionsTest {
   private fun exchange(
     uri: String = "/",
     vararg uriVariables: Any,
@@ -28,13 +26,13 @@ class MethodArgumentResolverTest {
   fun `getPathParameter returns path variable`() {
     val exchange = exchange(pathVariables = mapOf("id" to "abc-123"))
 
-    assertEquals("abc-123", resolver.getPathParameter<String>("id", exchange))
+    assertEquals("abc-123", exchange.getPathParameter<String>("id"))
   }
 
   @Test
   fun `getPathParameter throws when path variables are not set`() {
     val error =
-      assertFailsWith<IllegalArgumentException> { resolver.getPathParameter<String>("id", exchange()) }
+      assertFailsWith<IllegalArgumentException> { exchange().getPathParameter<String>("id") }
 
     assertEquals("Missing path variables", error.message)
   }
@@ -44,7 +42,7 @@ class MethodArgumentResolverTest {
     val exchange = exchange(pathVariables = mapOf("other" to "value"))
 
     val error =
-      assertFailsWith<IllegalArgumentException> { resolver.getPathParameter<String>("id", exchange) }
+      assertFailsWith<IllegalArgumentException> { exchange.getPathParameter<String>("id") }
 
     assertEquals("Missing path variable: id", error.message)
   }
@@ -53,30 +51,30 @@ class MethodArgumentResolverTest {
 
   @Test
   fun `getRequestParameter returns query parameter`() {
-    assertEquals("active", resolver.getRequestParameter("status", exchange("/items?status=active")))
+    assertEquals("active", exchange("/items?status=active").getRequestParameter("status"))
   }
 
   @Test
   fun `getRequestParameter returns first value of repeated parameter`() {
-    assertEquals("a", resolver.getRequestParameter("status", exchange("/items?status=a&status=b")))
+    assertEquals("a", exchange("/items?status=a&status=b").getRequestParameter("status"))
   }
 
   @Test
   fun `getRequestParameter returns empty string for parameter without value`() {
-    assertEquals("", resolver.getRequestParameter("flag", exchange("/items?flag=")))
+    assertEquals("", exchange("/items?flag=").getRequestParameter("flag"))
   }
 
   @Test
   fun `getRequestParameter decodes encoded values`() {
     // The URI variable is percent-encoded once (to a%20b) and decoded again when query params are parsed.
-    assertEquals("a b", resolver.getRequestParameter("q", exchange("/items?q={q}", "a b")))
+    assertEquals("a b", exchange("/items?q={q}", "a b").getRequestParameter("q"))
   }
 
   @Test
   fun `getRequestParameter throws 400 when parameter is absent`() {
     val error =
       assertFailsWith<ServerWebInputException> {
-        resolver.getRequestParameter("status", exchange("/items?other=x"))
+        exchange("/items?other=x").getRequestParameter("status")
       }
 
     assertEquals(HttpStatus.BAD_REQUEST, error.statusCode)
@@ -87,11 +85,11 @@ class MethodArgumentResolverTest {
 
   @Test
   fun `getRequestParameterOrNull returns query parameter`() {
-    assertEquals("active", resolver.getRequestParameterOrNull("status", exchange("/items?status=active")))
+    assertEquals("active", exchange("/items?status=active").getRequestParameterOrNull("status"))
   }
 
   @Test
   fun `getRequestParameterOrNull returns null when parameter is absent`() {
-    assertNull(resolver.getRequestParameterOrNull("status", exchange("/items")))
+    assertNull(exchange("/items").getRequestParameterOrNull("status"))
   }
 }

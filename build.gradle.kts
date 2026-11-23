@@ -55,6 +55,7 @@ dependencies {
 
 kotlin {
   compilerOptions {
+    javaParameters.set(true)
     freeCompilerArgs.addAll("-Xjsr305=strict", "-Xannotation-default-target=param-property")
   }
 }
